@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Scene } from "@/components/Canvas/Scene";
+import dynamic from "next/dynamic";
 import { useBookStore } from "@/store/useBookStore";
+
+// Dynamically import the HTML Flipbook with SSR disabled
+const HTMLBook = dynamic(() => import("@/components/Book/HTMLBook"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <div className="w-12 h-12 rounded-full border-2 border-t-amber-500 border-amber-500/20 animate-spin" />
+      <span className="font-serif italic text-sm text-amber-200/60">Opening wedding album...</span>
+    </div>
+  ),
+});
 import { albumData } from "@/data/album";
 import {
   ChevronLeft,
@@ -203,7 +214,7 @@ export default function Page() {
 
       {/* 2. MAIN 3D SHOWROOM CANVAS AREA */}
       <div className="relative flex-grow min-h-0 w-full z-0 flex items-center justify-center">
-        <Scene />
+        <HTMLBook />
 
         {/* Floating Side Info Panel */}
         {showInfo && (
@@ -214,23 +225,27 @@ export default function Page() {
             <ul className="text-xs text-stone-300 space-y-2.5">
               <li className="flex justify-between">
                 <span className="font-medium text-amber-200/70">Left/Right Click:</span>
-                <span>Flip pages in 3D</span>
+                <span>Click page sides to flip</span>
               </li>
               <li className="flex justify-between">
-                <span className="font-medium text-amber-200/70">Left/Right Drag:</span>
-                <span>Orbit camera viewport</span>
+                <span className="font-medium text-amber-200/70">Corner Drag:</span>
+                <span>Pull corners to flip pages</span>
               </li>
               <li className="flex justify-between">
-                <span className="font-medium text-amber-200/70">Touch Swipe:</span>
-                <span>Flip sheets on Mobile</span>
+                <span className="font-medium text-amber-200/70">Pinch/Scroll:</span>
+                <span>Zoom in and out of pages</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="font-medium text-amber-200/70">Double Click:</span>
+                <span>Reset zoom to default</span>
               </li>
               <li className="flex justify-between">
                 <span className="font-medium text-amber-200/70">Arrow Keys:</span>
                 <span>Keyboard pagination</span>
               </li>
               <li className="flex justify-between border-t border-amber-500/10 pt-2.5 mt-2">
-                <span className="font-medium text-amber-200/70">Glossy Finish:</span>
-                <span>Studio reflections active</span>
+                <span className="font-medium text-amber-200/70">Auto-Play:</span>
+                <span>Slideshow triggers flips</span>
               </li>
             </ul>
             <button

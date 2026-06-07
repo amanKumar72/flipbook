@@ -9,8 +9,15 @@ declare module "next/types.js" {
   export type ResolvingViewport = any;
 }
 
+declare module "next/dynamic" {
+  const dynamic: any;
+  export default dynamic;
+}
+
 declare module "next/font/google" {
   export function Geist(options?: any): any;
   export function Geist_Mono(options?: any): any;
   export function Inter(options?: any): any;
 }
+
+declare module "react-pageflip";
