@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BookOpen, Mail, Link, Trash2, Calendar, Loader, Edit } from "lucide-react";
 import { EmailShareModal } from "./EmailShareModal";
 import { useToastStore } from "@/store/useToastStore";
@@ -9,7 +9,7 @@ interface Flipbook {
   _id: string;
   title: string;
   description: string;
-  spreads: any[];
+  spreads: unknown[];
   createdAt: string;
 }
 
@@ -23,11 +23,13 @@ export function BookList({ onSelectTab, onEditBook }: BookListProps) {
   const [books, setBooks] = useState<Flipbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [bookToDelete, setBookToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deletingBookId, setDeletingBookId] = useState<string | null>(null);
   
   // Share Modal State
   const [selectedBook, setSelectedBook] = useState<{ id: string; title: string } | null>(null);
 
-  const fetchBooks = async () => {
+  const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/books");
@@ -43,11 +45,11 @@ export function BookList({ onSelectTab, onEditBook }: BookListProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchBooks();
-  }, []);
+    void Promise.resolve().then(fetchBooks);
+  }, [fetchBooks]);
 
   const handleCopyLink = (bookId: string) => {
     const origin = window.location.origin;
@@ -57,15 +59,17 @@ export function BookList({ onSelectTab, onEditBook }: BookListProps) {
   };
 
   const handleDelete = async (bookId: string) => {
-    if (!confirm("Are you sure you want to delete this album? This action cannot be undone.")) return;
+    if (deletingBookId) return;
 
+    setDeletingBookId(bookId);
     try {
       const response = await fetch(`/api/books/${bookId}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setBooks(books.filter((b) => b._id !== bookId));
+        setBooks((currentBooks) => currentBooks.filter((b) => b._id !== bookId));
+        setBookToDelete(null);
         addToast("Album deleted successfully.", "success");
       } else {
         addToast("Failed to delete album.", "error");
@@ -73,6 +77,8 @@ export function BookList({ onSelectTab, onEditBook }: BookListProps) {
     } catch (err) {
       console.error(err);
       addToast("An error occurred. Please try again.", "error");
+    } finally {
+      setDeletingBookId(null);
     }
   };
 
@@ -197,11 +203,12 @@ export function BookList({ onSelectTab, onEditBook }: BookListProps) {
                   </button>
 
                   <button
-                    onClick={() => handleDelete(book._id)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-rose-950/20 hover:border-rose-500/50 hover:bg-rose-500/5 rounded text-rose-500/80 hover:text-rose-400 text-[10px] uppercase font-mono tracking-wider transition-all"
+                    onClick={() => setBookToDelete({ id: book._id, title: book.title })}
+                    disabled={deletingBookId === book._id}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-rose-500/20 hover:border-rose-500/50 hover:bg-rose-500/5 rounded text-rose-500/80 hover:text-rose-400 text-[10px] uppercase font-mono tracking-wider transition-all"
                   >
-                    <Trash2 size={12} />
-                    Delete
+                    {deletingBookId === book._id ? <Loader size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    {deletingBookId === book._id ? "Deleting" : "Delete"}
                   </button>
                 </div>
               </div>
@@ -218,6 +225,52 @@ export function BookList({ onSelectTab, onEditBook }: BookListProps) {
           bookId={selectedBook.id}
           defaultTitle={selectedBook.title}
         />
+      )}
+
+      {bookToDelete && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-album-title"
+            className="w-full max-w-md rounded-xl border border-rose-500/20 bg-[#120d0b] p-6 shadow-2xl shadow-black/60"
+          >
+            <div className="flex items-start gap-4">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-400">
+                <Trash2 size={18} />
+              </div>
+              <div className="space-y-2">
+                <h3 id="delete-album-title" className="font-serif text-lg font-bold text-amber-100">
+                  Delete album?
+                </h3>
+                <p className="text-sm leading-6 text-stone-400">
+                  This will permanently delete &quot;{bookToDelete.title}&quot; and all associated photos. This action cannot be
+                  undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setBookToDelete(null)}
+                disabled={deletingBookId === bookToDelete.id}
+                className="rounded border border-stone-700 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-stone-300 transition-all hover:border-stone-500 hover:bg-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(bookToDelete.id)}
+                disabled={deletingBookId === bookToDelete.id}
+                className="flex items-center justify-center gap-2 rounded border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-rose-300 transition-all hover:border-rose-400 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingBookId === bookToDelete.id ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {deletingBookId === bookToDelete.id ? "Deleting" : "Delete Album"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

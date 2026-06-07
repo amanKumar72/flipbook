@@ -47,6 +47,30 @@ export async function GET(
   }
 }
 
+// Helper to extract public_id from Cloudinary URL
+function getPublicIdFromUrl(url: string): string | null {
+  if (!url || !url.startsWith("https://res.cloudinary.com/")) return null;
+  
+  const parts = url.split("/image/upload/");
+  if (parts.length < 2) return null;
+  
+  const subParts = parts[1].split("/");
+  
+  // Skip version string (e.g. v1720822618)
+  if (subParts[0].match(/^v\d+$/)) {
+    subParts.shift();
+  }
+  
+  const remaining = subParts.join("/");
+  
+  const lastDotIdx = remaining.lastIndexOf(".");
+  if (lastDotIdx !== -1) {
+    return remaining.substring(0, lastDotIdx);
+  }
+  
+  return remaining;
+}
+
 // DELETE album by ID (Protected, owner only)
 export async function DELETE(
   req: NextRequest,
@@ -71,8 +95,47 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // 1. Gather all associated Cloudinary images to clean up
+    const publicIds: string[] = [];
+    const addUrl = (url: string) => {
+      const publicId = getPublicIdFromUrl(url);
+      if (publicId) publicIds.push(publicId);
+    };
+
+    if (book.coverFrontImage) addUrl(book.coverFrontImage);
+    if (book.coverBackImage) addUrl(book.coverBackImage);
+    if (book.spreads && Array.isArray(book.spreads)) {
+      book.spreads.forEach((spread: any) => {
+        if (spread.leftImage) addUrl(spread.leftImage);
+        if (spread.rightImage) addUrl(spread.rightImage);
+      });
+    }
+
+    // 2. Perform parallel asset destruction in Cloudinary
+    if (publicIds.length > 0) {
+      try {
+        const { v2: cloudinary } = require("cloudinary");
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+
+        console.log(`Deleting ${publicIds.length} Cloudinary assets for album: ${bookId}`);
+        await Promise.all(
+          publicIds.map((publicId) =>
+            cloudinary.uploader.destroy(publicId).catch((err: any) => {
+              console.error(`Failed to delete Cloudinary asset ${publicId}:`, err);
+            })
+          )
+        );
+      } catch (cloudinaryErr) {
+        console.error("Failed to connect/authenticate with Cloudinary on album delete:", cloudinaryErr);
+      }
+    }
+
     await Flipbook.findByIdAndDelete(bookId);
-    return NextResponse.json({ success: true, message: "Album deleted successfully" });
+    return NextResponse.json({ success: true, message: "Album and all associated photos deleted successfully" });
   } catch (error: any) {
     console.error("DELETE single book error:", error);
     return NextResponse.json(

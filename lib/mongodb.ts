@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
+import dns from "dns";
 
-const MONGO_DB_URI = process.env.MONGO_DB_URI || "mongodb://localhost:27017/mydatabase";
+// Prevent querySrv ECONNREFUSED errors on networks that block or fail DNS SRV queries
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+} catch (err) {
+  console.warn("Could not configure custom DNS servers:", err);
+}
 
+const MONGO_DB_URI = process.env.MONGO_DB_URI!;
 let cached = (global as any).mongoose;
 
 if (!cached) {
