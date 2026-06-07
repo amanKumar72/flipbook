@@ -8,6 +8,7 @@ interface BookState {
   nextPage: () => void;
   prevPage: () => void;
   setPage: (page: number) => void;
+  setTotalPages: (totalPages: number) => void;
   setAnimating: (isAnimating: boolean) => void;
 }
 
@@ -41,6 +42,8 @@ export const useBookStore = create<BookState>((set) => ({
       }
       return { currentPage: page };
     }),
+
+  setTotalPages: (totalPages) => set({ totalPages }),
 
   setAnimating: (isAnimating) => set({ isAnimating }),
 }));

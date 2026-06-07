@@ -21,3 +21,17 @@ declare module "next/font/google" {
 }
 
 declare module "react-pageflip";
+
+declare module "next/server" {
+  export const NextRequest: any;
+  export const NextResponse: any;
+  export type NextRequest = any;
+  export type NextResponse = any;
+}
+
+declare module "next/server.js" {
+  export const NextRequest: any;
+  export const NextResponse: any;
+  export type NextRequest = any;
+  export type NextResponse = any;
+}
