@@ -74,7 +74,7 @@ interface PageProps {
 
 export default function ViewerPage({ params }: PageProps) {
   const { user, isLoaded } = useUser();
-  const bookId = use(params);
+  const { bookId } = use(params);
   const addToast = useToastStore((state) => state.addToast);
 
   const [book, setBook] = useState<any>(null);

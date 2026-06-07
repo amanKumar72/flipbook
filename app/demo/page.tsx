@@ -195,7 +195,7 @@ export default function DemoPage() {
       {/* Hidden Audio Tag playing beautiful piano instrumental */}
       <audio
         ref={audioRef}
-        src="https://archive.org/download/PachelbelCanonInDMajor/PachelbelCanonInDMajor.mp3"
+        src="/audio/default.mp3"
         loop
       />
 

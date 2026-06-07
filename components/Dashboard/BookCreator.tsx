@@ -51,10 +51,12 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
 
   const presets: { [key: string]: string } = {
     silent: "",
-    canon: "https://archive.org/download/PachelbelCanonInDMajor/PachelbelCanonInDMajor.mp3",
+    canon: "/audio/default.mp3",
     acoustic: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
     serenade: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
   };
+
+  const isUploading = uploadingFront || uploadingBack || spreads.some((s) => s.uploading);
 
   const deleteImageFromCloudinary = async (url: string) => {
     if (!url) return;
@@ -697,7 +699,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
             type="button"
             onClick={handleAddSpreadTop}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/20 hover:border-amber-500 hover:bg-amber-500 hover:text-black rounded text-amber-400 font-semibold text-xs tracking-wider uppercase active:scale-95 transition-all"
-            disabled={saving}
+            disabled={saving || isUploading}
           >
             <Plus size={14} />
             Add Spread (Top)
@@ -721,7 +723,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
                     onClick={() => handleRemoveSpread(idx)}
                     className="text-stone-500 hover:text-rose-455 p-1.5 hover:bg-white/5 rounded transition-all"
                     title="Remove Spread"
-                    disabled={saving}
+                    disabled={saving || isUploading}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -820,7 +822,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
             type="button"
             onClick={handleAddSpreadBottom}
             className="flex items-center justify-center gap-2 px-6 py-2 border border-dashed border-amber-500/20 hover:border-amber-500 hover:bg-amber-500 hover:text-black rounded-lg text-amber-400 font-semibold text-xs tracking-wider uppercase active:scale-95 transition-all w-full max-w-xs"
-            disabled={saving}
+            disabled={saving || isUploading}
           >
             <Plus size={14} />
             Add Spread (Bottom)
@@ -841,7 +843,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
           type="button"
           onClick={onCancel || onSuccess}
           className="px-6 py-2.5 border border-stone-850 hover:bg-stone-900 hover:text-white rounded text-stone-400 text-xs uppercase font-mono tracking-wider font-semibold active:scale-95 transition-all"
-          disabled={saving}
+          disabled={saving || isUploading}
         >
           {onCancel ? "Cancel" : "Back"}
         </button>
@@ -849,12 +851,17 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
         <button
           type="submit"
           className="px-8 py-2.5 rounded bg-amber-600 hover:bg-amber-500 disabled:opacity-55 disabled:pointer-events-none text-black text-xs font-semibold uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-all shadow-md shadow-amber-500/5"
-          disabled={saving}
+          disabled={saving || isUploading}
         >
           {saving ? (
             <>
               <Loader className="animate-spin" size={14} />
               Saving Album...
+            </>
+          ) : isUploading ? (
+            <>
+              <Loader className="animate-spin" size={14} />
+              Uploading...
             </>
           ) : (
             <>
