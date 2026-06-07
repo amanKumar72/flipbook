@@ -30,14 +30,14 @@ export const albumData: SpreadData[] = [
   },
   {
     id: "4",
-    leftImage: "https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=1000&auto=format&fit=crop",
+    leftImage: "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?q=80&w=1000&auto=format&fit=crop",
     rightImage: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?q=80&w=1000&auto=format&fit=crop",
     title: "PORTRAITS OF LOVE",
     subtitle: "A timeless promise captured in light."
   },
   {
     id: "5",
-    leftImage: "https://images.unsplash.com/photo-1507504038482-7621c3383a7e?q=80&w=1000&auto=format&fit=crop",
+    leftImage: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=1000&auto=format&fit=crop",
     rightImage: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=1000&auto=format&fit=crop",
     title: "THE RECEPTION",
     subtitle: "Dancing under a canopy of gold."

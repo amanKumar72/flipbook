@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Premium HTML Invitation Template (Gold and Charcoal)
     const mailOptions = {
-      from: `"${coupleNames} via FlipiX" <${process.env.EMAIL_USER}>`,
+      from: `"${coupleNames} via Flippy" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: `You're Invited: View the Wedding Album of ${coupleNames}`,
       html: `
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
               Browse our digital layflat album: <strong>"${albumTitle}"</strong>.
             </p>
             <a href="${viewerLink}" class="button" target="_blank">Open Digital Album</a>
-            <div class="footer">✦ FlipiX Showcase ✦</div>
+            <div class="footer">✦ Flippy Showcase ✦</div>
           </div>
         </body>
         </html>

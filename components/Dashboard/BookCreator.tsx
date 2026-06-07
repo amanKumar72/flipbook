@@ -23,6 +23,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
   const [coverFrontImage, setCoverFrontImage] = useState("");
   const [coverBackImage, setCoverBackImage] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
+  const [weddingDate, setWeddingDate] = useState("");
   
   // Audio state options
   const [audioSelection, setAudioSelection] = useState<string>("silent");
@@ -50,9 +51,9 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
 
   const presets: { [key: string]: string } = {
     silent: "",
-    canon: "https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-200.mp3",
-    acoustic: "https://assets.mixkit.co/music/preview/mixkit-sunshine-jam-206.mp3",
-    serenade: "https://assets.mixkit.co/music/preview/mixkit-serenade-of-the-stars-2367.mp3",
+    canon: "https://archive.org/download/PachelbelCanonInDMajor/PachelbelCanonInDMajor.mp3",
+    acoustic: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    serenade: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
   };
 
   const deleteImageFromCloudinary = async (url: string) => {
@@ -87,6 +88,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
       setCoverFrontImage("");
       setCoverBackImage("");
       setAudioUrl("");
+      setWeddingDate("");
       setAudioSelection("silent");
       setCustomAudioUrl("");
       setSpreads([
@@ -112,6 +114,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
           setDescription(data.description || "");
           setCoverFrontImage(data.coverFrontImage || "");
           setCoverBackImage(data.coverBackImage || "");
+          setWeddingDate(data.weddingDate || "");
           
           const dbAudio = data.audioUrl || "";
           setAudioUrl(dbAudio);
@@ -438,6 +441,7 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
         coverFrontImage,
         coverBackImage,
         audioUrl,
+        weddingDate,
         spreads: mappedSpreads,
       };
 
@@ -507,6 +511,20 @@ export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProp
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 text-stone-200 text-sm bg-stone-900 border border-amber-500/10 rounded focus:border-amber-500/50 focus:outline-none transition-all placeholder:text-stone-600"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-amber-500/60 font-semibold">
+              Wedding Date (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Thursday, September 5, 2026 or 05/09/2026"
+              value={weddingDate}
+              onChange={(e) => setWeddingDate(e.target.value)}
+              className="w-full px-3 py-2 text-stone-200 text-sm bg-stone-900 border border-amber-500/10 rounded focus:border-amber-500/50 focus:outline-none transition-all placeholder:text-stone-700 font-serif"
               disabled={saving}
             />
           </div>

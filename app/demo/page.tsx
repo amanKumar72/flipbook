@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useUser, UserButton } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { useBookStore } from "@/store/useBookStore";
 import { albumData } from "@/data/album";
@@ -69,6 +70,7 @@ function GoldParticles() {
 }
 
 export default function DemoPage() {
+  const { user, isLoaded } = useUser();
   const addToast = useToastStore((state) => state.addToast);
   const currentPage = useBookStore((state) => state.currentPage);
   const totalPages = useBookStore((state) => state.totalPages);
@@ -193,7 +195,7 @@ export default function DemoPage() {
       {/* Hidden Audio Tag playing beautiful piano instrumental */}
       <audio
         ref={audioRef}
-        src="https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-200.mp3"
+        src="https://archive.org/download/PachelbelCanonInDMajor/PachelbelCanonInDMajor.mp3"
         loop
       />
 
@@ -209,7 +211,7 @@ export default function DemoPage() {
           </a>
           <div>
             <h1 className="font-serif text-base tracking-wider text-amber-100 font-semibold uppercase">
-              FlipiX Showcase Demo
+              Flippy Showcase Demo
             </h1>
             <p className="text-[10px] text-amber-500/60 font-mono tracking-widest uppercase">
               Premium digital Wedding Album
@@ -232,17 +234,22 @@ export default function DemoPage() {
           <div className="hidden sm:flex flex-col gap-0.5 text-stone-400">
             <span className="flex items-center gap-1.5 justify-end">
               <Phone size={12} className="text-amber-500/60" />
-              +91 91620 72838
+              {process.env.NEXT_PUBLIC_CREATOR_PHONE || "+91 91620 72838"}
             </span>
           </div>
-          <a
-            href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-800 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
-            title="Go Home"
-          >
-            <Home size={14} className="text-amber-500/60" />
-            <span className="hidden sm:inline">Home</span>
-          </a>
+          {isLoaded && (
+            user ? (
+              <UserButton />
+            ) : (
+              <a
+                href="/dashboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-800 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all text-xs"
+                title="Log In"
+              >
+                Log In
+              </a>
+            )
+          )}
         </div>
       </header>
 
@@ -287,12 +294,12 @@ export default function DemoPage() {
         <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-4 pointer-events-none select-none">
           <div className="h-16 w-[1px] bg-gradient-to-b from-transparent to-amber-500/30" />
           <span className="text-[10px] tracking-[0.6em] font-bold text-amber-500/40 uppercase [writing-mode:vertical-lr] rotate-180">
-            FLIPIX SHOWROOM
+            FLIPPY SHOWROOM
           </span>
           <div className="h-16 w-[1px] bg-gradient-to-t from-transparent to-amber-500/30" />
         </div>
 
-        {/* RIGHT DECAL: Vertical Toolbar Panel (FlipiX Style) */}
+        {/* RIGHT DECAL: Vertical Toolbar Panel (Flippy Style) */}
         <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-3.5 p-2 rounded-full border border-amber-500/10 bg-black/60 backdrop-blur-md z-20 shadow-xl shadow-black/40">
           {/* Glowing Music Button */}
           <button

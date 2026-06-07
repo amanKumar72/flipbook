@@ -48,10 +48,11 @@ interface HTMLBookProps {
   }>;
   coverFrontImage?: string;
   coverBackImage?: string;
+  weddingDate?: string;
 }
 
 // 2. Main HTML Book Component
-export default function HTMLBook({ spreads = albumData, coverFrontImage, coverBackImage }: HTMLBookProps) {
+export default function HTMLBook({ spreads = albumData, coverFrontImage, coverBackImage, weddingDate }: HTMLBookProps) {
   const currentPage = useBookStore((state) => state.currentPage);
   const totalPages = useBookStore((state) => state.totalPages);
   const isAnimating = useBookStore((state) => state.isAnimating);
@@ -206,7 +207,7 @@ export default function HTMLBook({ spreads = albumData, coverFrontImage, coverBa
                         
                         {/* Bottom date stamp */}
                         <div className="text-center font-mono text-[9px] tracking-widest text-amber-500/40 uppercase">
-                          Est. Thursday 05/09/2026
+                          {weddingDate ? `Est. ${weddingDate}` : "Est. Thursday 05/09/2026"}
                         </div>
                       </>
                     )}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { use, useEffect, useRef, useState } from "react";
+import { useUser, UserButton } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { useBookStore } from "@/store/useBookStore";
 import {
@@ -16,6 +17,7 @@ import {
   Home,
   Loader,
   Music,
+  Phone,
 } from "lucide-react";
 import { useToastStore } from "@/store/useToastStore";
 
@@ -71,7 +73,8 @@ interface PageProps {
 }
 
 export default function ViewerPage({ params }: PageProps) {
-  const { bookId } = use(params);
+  const { user, isLoaded } = useUser();
+  const bookId = use(params);
   const addToast = useToastStore((state) => state.addToast);
 
   const [book, setBook] = useState<any>(null);
@@ -289,15 +292,19 @@ export default function ViewerPage({ params }: PageProps) {
       <header className="relative w-full px-6 py-4 border-b border-amber-500/10 flex justify-between items-center bg-black/40 backdrop-blur-md z-10 select-none">
         {/* Left: laurel wreath + Title */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md shadow-amber-500/5 bg-amber-500/5">
+          <a
+            href="/"
+            className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md shadow-amber-500/5 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+          >
             ❦
-          </div>
+          </a>
           <div>
             <h1 className="font-serif text-base tracking-wider text-amber-100 font-semibold uppercase">
               {book.title}
             </h1>
             <p className="text-[10px] text-amber-500/60 font-mono tracking-widest uppercase line-clamp-1">
               {book.description || "Premium Wedding Showcase"}
+              {book.weddingDate && ` • ${book.weddingDate}`}
             </p>
           </div>
         </div>
@@ -312,16 +319,46 @@ export default function ViewerPage({ params }: PageProps) {
           </span>
         </div>
 
-        {/* Right: Quick back home action if authenticated */}
         <div className="flex items-center gap-4 text-right text-xs">
-          <a
-            href="/dashboard"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-850 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
-            title="Go to Dashboard"
-          >
-            <Home size={14} className="text-amber-500/60" />
-            <span className="hidden sm:inline">Studio</span>
-          </a>
+          {book.creatorPhone && (
+            <div className="hidden sm:flex flex-col gap-0.5 text-stone-400">
+              <span className="flex items-center gap-1.5 justify-end">
+                <Phone size={12} className="text-amber-500/60" />
+                {book.creatorPhone}
+              </span>
+            </div>
+          )}
+          {isLoaded && (
+            user ? (
+              <>
+                <a
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-850 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
+                  title="Go to Dashboard"
+                >
+                  <span>Studio</span>
+                </a>
+                <UserButton />
+              </>
+            ) : (
+              <>
+                <a
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-850 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
+                  title="Log In"
+                >
+                  Log In
+                </a>
+                <a
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-850 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
+                  title="Go to Dashboard"
+                >
+                  <span>Studio</span>
+                </a>
+              </>
+            )
+          )}
         </div>
       </header>
 
@@ -333,6 +370,7 @@ export default function ViewerPage({ params }: PageProps) {
           spreads={book.spreads}
           coverFrontImage={book.coverFrontImage}
           coverBackImage={book.coverBackImage}
+          weddingDate={book.weddingDate}
         />
 
         {/* Guide Modal Overlay */}

@@ -14,6 +14,7 @@ export interface IFlipbook extends Document {
   coverFrontImage?: string;
   coverBackImage?: string;
   audioUrl?: string;
+  weddingDate?: string;
   spreads: ISpread[];
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +35,7 @@ const FlipbookSchema = new Schema<IFlipbook>(
     coverFrontImage: { type: String, default: "" },
     coverBackImage: { type: String, default: "" },
     audioUrl: { type: String, default: "" },
+    weddingDate: { type: String, default: "" },
     spreads: { type: [SpreadSchema], required: true, default: [] },
   },
   { timestamps: true }

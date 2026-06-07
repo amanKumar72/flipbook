@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, createClerkClient } from "@clerk/nextjs/server";
 import dbConnect from "@/lib/mongodb";
 import Flipbook from "@/lib/models/Flipbook";
 
@@ -17,7 +17,27 @@ export async function GET(
       return NextResponse.json({ error: "Album not found" }, { status: 404 });
     }
 
-    return NextResponse.json(book);
+    // Fetch creator's phone number from Clerk
+    let creatorPhone = "";
+    try {
+      if (process.env.CLERK_SECRET_KEY) {
+        const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+        const clerkUser = await clerkClient.users.getUser(book.userId);
+        if (clerkUser && clerkUser.phoneNumbers) {
+          const primaryPhone = clerkUser.phoneNumbers.find(
+            (p: any) => p.id === clerkUser.primaryPhoneNumberId
+          );
+          creatorPhone = primaryPhone?.phoneNumber || clerkUser.phoneNumbers[0]?.phoneNumber || "";
+        }
+      }
+    } catch (clerkError) {
+      console.error("Clerk fetch user error in GET /api/books/[bookId]:", clerkError);
+    }
+
+    const bookData = book.toObject() as any;
+    bookData.creatorPhone = creatorPhone;
+
+    return NextResponse.json(bookData);
   } catch (error: any) {
     console.error("GET single book error:", error);
     return NextResponse.json(
@@ -87,7 +107,7 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { title, description, coverFrontImage, coverBackImage, audioUrl, spreads } = body;
+    const { title, description, coverFrontImage, coverBackImage, audioUrl, weddingDate, spreads } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -99,6 +119,7 @@ export async function PUT(
     book.coverFrontImage = coverFrontImage || "";
     book.coverBackImage = coverBackImage || "";
     book.audioUrl = audioUrl || "";
+    book.weddingDate = weddingDate || "";
     book.spreads = spreads || [];
 
     await book.save();

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { BookList } from "@/components/Dashboard/BookList";
 import { BookCreator } from "@/components/Dashboard/BookCreator";
-import { BookOpen, PlusCircle, LogOut } from "lucide-react";
+import { BookOpen, PlusCircle, LogOut, Home } from "lucide-react";
 
 // Floating gold sparkles component for background ambiance
 function GoldParticles() {
@@ -45,12 +45,16 @@ export default function DashboardPage() {
       {/* HEADER BAR */}
       <header className="relative w-full px-6 py-4 border-b border-amber-500/15 flex justify-between items-center bg-black/55 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md shadow-amber-500/5 bg-amber-500/5">
+          <a
+            href="/"
+            className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md shadow-amber-500/5 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+            title="Go to Homepage"
+          >
             ❦
-          </div>
+          </a>
           <div>
             <h1 className="font-serif text-base tracking-wider text-amber-100 font-semibold uppercase">
-              FlipiX Studio
+              Flippy Studio
             </h1>
             <p className="text-[10px] text-amber-500/60 font-mono tracking-widest uppercase">
               Creator Dashboard
@@ -59,19 +63,21 @@ export default function DashboardPage() {
         </div>
 
         {/* User profile / logout controls */}
-        {isLoaded && user && (
-          <div className="flex items-center gap-3 bg-stone-900/50 border border-amber-500/10 rounded-full px-4 py-1.5 shadow-inner">
-            <div className="flex flex-col text-right hidden sm:flex">
-              <span className="text-xs font-serif font-medium text-amber-200/90 leading-tight">
-                {user.fullName || user.primaryEmailAddress?.emailAddress}
-              </span>
-              <span className="text-[9px] font-mono text-stone-500 tracking-wider">
-                Wedding Creator
-              </span>
+        <div className="flex items-center gap-4">
+          {isLoaded && user && (
+            <div className="flex items-center gap-3 bg-stone-900/50 border border-amber-500/10 rounded-full px-4 py-1.5 shadow-inner">
+              <div className="flex flex-col text-right hidden sm:flex">
+                <span className="text-xs font-serif font-medium text-amber-200/90 leading-tight">
+                  {user.fullName || user.primaryEmailAddress?.emailAddress}
+                </span>
+                <span className="text-[9px] font-mono text-stone-500 tracking-wider">
+                  Wedding Creator
+                </span>
+              </div>
+              <UserButton />
             </div>
-            <UserButton />
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {/* DASHBOARD BODY */}
@@ -156,7 +162,7 @@ export default function DashboardPage() {
 
       {/* FOOTER */}
       <footer className="relative w-full py-6 border-t border-amber-500/10 bg-black/20 text-center text-[10px] text-amber-500/40 font-mono tracking-widest uppercase z-10 mt-auto">
-        ✦ Powered by FlipiX Luxury Publishing ✦
+        ✦ Powered by Flippy Luxury Publishing ✦
       </footer>
     </main>
   );

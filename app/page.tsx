@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useUser, UserButton } from "@clerk/nextjs";
 import {
   BookOpen,
   Music,
@@ -53,6 +54,7 @@ function GoldParticles() {
 }
 
 export default function LandingPage() {
+  const { user, isLoaded } = useUser();
   return (
     <main
       className="relative min-h-screen bg-[#070504] text-stone-200 overflow-x-hidden flex flex-col font-sans select-none"
@@ -65,12 +67,16 @@ export default function LandingPage() {
       {/* HEADER BAR */}
       <header className="relative w-full px-6 py-4 border-b border-amber-500/10 flex justify-between items-center bg-black/40 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md bg-amber-500/5">
+          <a
+            href="/"
+            className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+            title="Go to Homepage"
+          >
             ❦
-          </div>
+          </a>
           <div>
             <h1 className="font-serif text-base tracking-wider text-amber-100 font-semibold uppercase">
-              FlipiX Layflat
+              Flippy Layflat
             </h1>
             <p className="text-[10px] text-amber-500/60 font-mono tracking-widest uppercase">
               Digital Wedding Albums
@@ -81,22 +87,42 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-8 text-xs uppercase font-mono tracking-wider text-stone-400">
           <a href="#features" className="hover:text-amber-400 transition-colors">Features</a>
           <a href="/demo" className="hover:text-amber-400 transition-colors">Live Demo</a>
-          <a href="/dashboard" className="hover:text-amber-400 transition-colors">Creator Studio</a>
+          <a href="/contact" className="hover:text-amber-400 transition-colors">Contact Us</a>
         </nav>
 
-        <div className="flex items-center gap-3">
-          <a
-            href="/demo"
-            className="px-4 py-1.5 border border-amber-500/20 hover:border-amber-500/60 rounded text-amber-400 text-xs font-semibold uppercase tracking-wider transition-all"
-          >
-            Showroom Demo
-          </a>
-          <a
-            href="/dashboard"
-            className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-black text-xs font-semibold uppercase tracking-wider rounded transition-all shadow-md shadow-amber-500/5"
-          >
-            Create Album
-          </a>
+        <div className="flex items-center gap-4">
+          {isLoaded && user ? (
+            <>
+              <a
+                href="/dashboard"
+                className="text-stone-300 hover:text-white text-xs uppercase font-mono tracking-wider transition-all"
+              >
+                Studio
+              </a>
+              <div className="flex items-center gap-3 bg-stone-900/50 border border-amber-500/10 rounded-full px-4 py-1.5 shadow-inner">
+                <div className="flex flex-col text-right hidden sm:flex">
+                  <span className="text-xs font-serif font-medium text-amber-200/90 leading-tight">
+                    {user.fullName || user.primaryEmailAddress?.emailAddress}
+                  </span>
+                  <span className="text-[9px] font-mono text-stone-500 tracking-wider">
+                    Wedding Creator
+                  </span>
+                </div>
+                <UserButton />
+              </div>
+            </>
+          ) : (
+            isLoaded && (
+              <>
+                <a
+                  href="/dashboard"
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-black text-xs font-semibold uppercase tracking-wider rounded transition-all shadow-md shadow-amber-500/5"
+                >
+                  Log In
+                </a>
+              </>
+            )
+          )}
         </div>
       </header>
 
@@ -293,8 +319,14 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer className="relative w-full py-8 border-t border-amber-500/10 bg-black/40 text-center text-[10px] text-amber-500/30 font-mono tracking-widest uppercase z-10 mt-auto flex flex-col gap-2">
-        <span>✦ Powered by FlipiX Luxury Publishing ✦</span>
-        <span className="text-[8px] text-stone-600">All rights reserved © 2026. Built with elegant layflat engineering.</span>
+        <div className="flex justify-center gap-6 mb-2 text-stone-500 lowercase font-serif italic text-xs normal-case tracking-normal">
+          <a href="/" className="hover:text-amber-400 transition-colors">Home</a>
+          <a href="/demo" className="hover:text-amber-400 transition-colors">Live Demo</a>
+          <a href="/contact" className="hover:text-amber-400 transition-colors">Contact Us</a>
+          <a href="/dashboard" className="hover:text-amber-400 transition-colors">Studio</a>
+        </div>
+        <span>✦ Powered by Flippy Luxury Publishing ✦</span>
+        <span className="text-[8px] text-stone-650">All rights reserved © 2026. Built with elegant layflat engineering.</span>
       </footer>
     </main>
   );
