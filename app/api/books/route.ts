@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, spreads } = body;
+    const { title, description, spreads, coverFrontImage, coverBackImage, audioUrl } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
       userId,
       title,
       description,
+      coverFrontImage,
+      coverBackImage,
+      audioUrl,
       spreads: spreads || [],
     });
 

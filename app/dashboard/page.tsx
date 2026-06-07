@@ -31,6 +31,7 @@ function GoldParticles() {
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const [activeTab, setActiveTab] = useState<"list" | "create">("list");
+  const [editingBookId, setEditingBookId] = useState<string | null>(null);
 
   return (
     <main
@@ -80,18 +81,27 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-amber-500/10 pb-4 gap-4">
           <div className="space-y-1">
             <h2 className="font-serif text-2xl font-bold tracking-wide text-amber-100">
-              {activeTab === "list" ? "My Collections" : "Craft New Album"}
+              {activeTab === "list"
+                ? "My Collections"
+                : editingBookId
+                ? "Modify Album"
+                : "Craft New Album"}
             </h2>
             <p className="text-xs text-stone-500 italic font-serif">
               {activeTab === "list"
                 ? "Manage your published premium wedding albums"
+                : editingBookId
+                ? "Modify your cover pages, music tracks, and page spreads"
                 : "Pair up high-definition spreads and design your story"}
             </p>
           </div>
 
           <div className="flex bg-stone-950/80 p-1 border border-amber-500/10 rounded-lg shadow-lg self-stretch sm:self-auto">
             <button
-              onClick={() => setActiveTab("list")}
+              onClick={() => {
+                setEditingBookId(null);
+                setActiveTab("list");
+              }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold tracking-wider uppercase rounded-md transition-all ${
                 activeTab === "list"
                   ? "bg-amber-600 text-black shadow-md shadow-amber-500/10"
@@ -102,7 +112,10 @@ export default function DashboardPage() {
               My Albums
             </button>
             <button
-              onClick={() => setActiveTab("create")}
+              onClick={() => {
+                setEditingBookId(null);
+                setActiveTab("create");
+              }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold tracking-wider uppercase rounded-md transition-all ${
                 activeTab === "create"
                   ? "bg-amber-600 text-black shadow-md shadow-amber-500/10"
@@ -110,7 +123,7 @@ export default function DashboardPage() {
               }`}
             >
               <PlusCircle size={14} />
-              Create Album
+              {editingBookId ? "Modify Album" : "Create Album"}
             </button>
           </div>
         </div>
@@ -118,9 +131,25 @@ export default function DashboardPage() {
         {/* Tab Content Router */}
         <div className="animate-in fade-in duration-300">
           {activeTab === "list" ? (
-            <BookList onSelectTab={setActiveTab} />
+            <BookList
+              onSelectTab={setActiveTab}
+              onEditBook={(id) => {
+                setEditingBookId(id);
+                setActiveTab("create");
+              }}
+            />
           ) : (
-            <BookCreator onSuccess={() => setActiveTab("list")} />
+            <BookCreator
+              editBookId={editingBookId}
+              onSuccess={() => {
+                setEditingBookId(null);
+                setActiveTab("list");
+              }}
+              onCancel={() => {
+                setEditingBookId(null);
+                setActiveTab("list");
+              }}
+            />
           )}
         </div>
       </section>

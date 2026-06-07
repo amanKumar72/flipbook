@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Trash2, Upload, Check, Loader, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Plus, Trash2, Upload, Check, Loader, X, Music, Image as ImageIcon, ArrowLeft } from "lucide-react";
 
 interface SpreadInput {
   image: string; // The single wide panoramic image representing the whole spread
@@ -12,12 +12,22 @@ interface SpreadInput {
 }
 
 interface BookCreatorProps {
+  editBookId?: string | null;
   onSuccess: () => void;
+  onCancel?: () => void;
 }
 
-export function BookCreator({ onSuccess }: BookCreatorProps) {
+export function BookCreator({ editBookId, onSuccess, onCancel }: BookCreatorProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [coverFrontImage, setCoverFrontImage] = useState("");
+  const [coverBackImage, setCoverBackImage] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
+  
+  // Audio state options
+  const [audioSelection, setAudioSelection] = useState<string>("silent");
+  const [customAudioUrl, setCustomAudioUrl] = useState("");
+
   const [spreads, setSpreads] = useState<SpreadInput[]>([
     {
       image: "",
@@ -27,10 +37,145 @@ export function BookCreator({ onSuccess }: BookCreatorProps) {
       error: "",
     },
   ]);
+
+  const [loadingBook, setLoadingBook] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const handleAddSpread = () => {
+  // Cover image uploading states
+  const [uploadingFront, setUploadingFront] = useState(false);
+  const [uploadingBack, setUploadingBack] = useState(false);
+  const [uploadErrorFront, setUploadErrorFront] = useState("");
+  const [uploadErrorBack, setUploadErrorBack] = useState("");
+
+  const presets: { [key: string]: string } = {
+    silent: "",
+    canon: "https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-200.mp3",
+    acoustic: "https://assets.mixkit.co/music/preview/mixkit-sunshine-jam-206.mp3",
+    serenade: "https://assets.mixkit.co/music/preview/mixkit-serenade-of-the-stars-2367.mp3",
+  };
+
+  const deleteImageFromCloudinary = async (url: string) => {
+    if (!url) return;
+    try {
+      const response = await fetch(`/api/upload?url=${encodeURIComponent(url)}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        console.error("Failed to delete image from Cloudinary:", await response.text());
+      }
+    } catch (err) {
+      console.error("Error calling Cloudinary delete:", err);
+    }
+  };
+
+  // Sync audio selection with URL
+  useEffect(() => {
+    if (audioSelection !== "custom") {
+      setAudioUrl(presets[audioSelection] || "");
+    } else {
+      setAudioUrl(customAudioUrl);
+    }
+  }, [audioSelection, customAudioUrl]);
+
+  // Load album details for editing on mount
+  useEffect(() => {
+    if (!editBookId) {
+      // Reset state for new book
+      setTitle("");
+      setDescription("");
+      setCoverFrontImage("");
+      setCoverBackImage("");
+      setAudioUrl("");
+      setAudioSelection("silent");
+      setCustomAudioUrl("");
+      setSpreads([
+        {
+          image: "",
+          title: "THE BEGINNING",
+          subtitle: "Two hearts, one journey starting today.",
+          uploading: false,
+          error: "",
+        },
+      ]);
+      return;
+    }
+
+    const fetchBook = async () => {
+      setLoadingBook(true);
+      setFormError("");
+      try {
+        const response = await fetch(`/api/books/${editBookId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setTitle(data.title);
+          setDescription(data.description || "");
+          setCoverFrontImage(data.coverFrontImage || "");
+          setCoverBackImage(data.coverBackImage || "");
+          
+          const dbAudio = data.audioUrl || "";
+          setAudioUrl(dbAudio);
+
+          // Sync presets
+          if (!dbAudio) {
+            setAudioSelection("silent");
+          } else if (dbAudio === presets.canon) {
+            setAudioSelection("canon");
+          } else if (dbAudio === presets.acoustic) {
+            setAudioSelection("acoustic");
+          } else if (dbAudio === presets.serenade) {
+            setAudioSelection("serenade");
+          } else {
+            setAudioSelection("custom");
+            setCustomAudioUrl(dbAudio);
+          }
+
+          // Map spreads
+          const mappedSpreads = data.spreads.map((s: any) => ({
+            image: s.leftImage, // left and right are identical in panoramic mode
+            title: s.title || "",
+            subtitle: s.subtitle || "",
+            uploading: false,
+            error: "",
+          }));
+
+          setSpreads(mappedSpreads.length > 0 ? mappedSpreads : [
+            {
+              image: "",
+              title: "",
+              subtitle: "",
+              uploading: false,
+              error: "",
+            },
+          ]);
+        } else {
+          setFormError("Failed to retrieve wedding album details.");
+        }
+      } catch (err) {
+        console.error(err);
+        setFormError("Failed to fetch album info. Check your network.");
+      } finally {
+        setLoadingBook(false);
+      }
+    };
+
+    fetchBook();
+  }, [editBookId]);
+
+  const handleAddSpreadTop = () => {
+    setSpreads([
+      {
+        image: "",
+        title: "",
+        subtitle: "",
+        uploading: false,
+        error: "",
+      },
+      ...spreads,
+    ]);
+  };
+
+  const handleAddSpreadBottom = () => {
     setSpreads([
       ...spreads,
       {
@@ -44,7 +189,11 @@ export function BookCreator({ onSuccess }: BookCreatorProps) {
   };
 
   const handleRemoveSpread = (index: number) => {
-    if (spreads.length === 1) return; // Keep at least one spread
+    if (spreads.length === 1) return;
+    const imageUrl = spreads[index].image;
+    if (imageUrl) {
+      deleteImageFromCloudinary(imageUrl);
+    }
     setSpreads(spreads.filter((_, idx) => idx !== index));
   };
 
@@ -54,66 +203,66 @@ export function BookCreator({ onSuccess }: BookCreatorProps) {
     setSpreads(updated);
   };
 
-// Helper to compress images exceeding 8MB on the client side
-const compressImage = (file: File): Promise<File> => {
-  return new Promise((resolve) => {
-    if (file.size < 8 * 1024 * 1024) {
-      resolve(file);
-      return;
-    }
+  // Compress images exceeding 8MB on client side
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      if (file.size < 8 * 1024 * 1024) {
+        resolve(file);
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
 
-        const MAX_SIZE = 2560;
-        if (width > MAX_SIZE || height > MAX_SIZE) {
-          if (width > height) {
-            height = Math.round((height * MAX_SIZE) / width);
-            width = MAX_SIZE;
-          } else {
-            width = Math.round((width * MAX_SIZE) / height);
-            height = MAX_SIZE;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-        }
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: "image/jpeg",
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
+          const MAX_SIZE = 2560;
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            if (width > height) {
+              height = Math.round((height * MAX_SIZE) / width);
+              width = MAX_SIZE;
             } else {
-              resolve(file);
+              width = Math.round((width * MAX_SIZE) / height);
+              height = MAX_SIZE;
             }
-          },
-          "image/jpeg",
-          0.85
-        );
-      };
-      img.onerror = () => resolve(file);
-    };
-    reader.onerror = () => resolve(file);
-  });
-};
+          }
 
-  // Upload file buffer directly via Next.js backend to Cloudinary
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            },
+            "image/jpeg",
+            0.85
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
+  // Upload spreads image
   const handleUploadFile = async (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number
@@ -121,17 +270,14 @@ const compressImage = (file: File): Promise<File> => {
     let file = e.target.files?.[0];
     if (!file) return;
 
-    // Local validation
     if (!file.type.startsWith("image/")) {
       updateUploadState(index, { error: "Please select an image file." });
       return;
     }
 
-    // Reset slot upload state to loading
     updateUploadState(index, { uploading: true, error: "" });
 
     try {
-      // Compress image if it exceeds 8MB
       file = await compressImage(file);
 
       const formData = new FormData();
@@ -145,7 +291,6 @@ const compressImage = (file: File): Promise<File> => {
       const data = await response.json();
 
       if (response.ok) {
-        // Save uploaded URL to spreads state
         setSpreads((prevSpreads) => {
           const updated = [...prevSpreads];
           updated[index].image = data.url;
@@ -167,7 +312,6 @@ const compressImage = (file: File): Promise<File> => {
     }
   };
 
-  // Helper to quickly toggle uploading state per slot
   const updateUploadState = (
     index: number,
     values: { uploading?: boolean; error?: string }
@@ -184,13 +328,83 @@ const compressImage = (file: File): Promise<File> => {
     });
   };
 
-  // Reset an uploaded image slot
   const handleRemoveImage = (index: number) => {
+    const imageUrl = spreads[index].image;
+    if (imageUrl) {
+      deleteImageFromCloudinary(imageUrl);
+    }
     setSpreads((prevSpreads) => {
       const updated = [...prevSpreads];
       updated[index].image = "";
       return updated;
     });
+  };
+
+  // Upload Cover Page image
+  const handleUploadCover = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "front" | "back"
+  ) => {
+    let file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      if (type === "front") setUploadErrorFront("Please select an image file.");
+      else setUploadErrorBack("Please select an image file.");
+      return;
+    }
+
+    if (type === "front") {
+      setUploadingFront(true);
+      setUploadErrorFront("");
+    } else {
+      setUploadingBack(true);
+      setUploadErrorBack("");
+    }
+
+    try {
+      file = await compressImage(file);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (type === "front") {
+          setCoverFrontImage(data.url);
+        } else {
+          setCoverBackImage(data.url);
+        }
+      } else {
+        const errMsg = data.error || "Upload failed.";
+        if (type === "front") setUploadErrorFront(errMsg);
+        else setUploadErrorBack(errMsg);
+      }
+    } catch (err) {
+      console.error(err);
+      const errMsg = "Network upload failed. Please try again.";
+      if (type === "front") setUploadErrorFront(errMsg);
+      else setUploadErrorBack(errMsg);
+    } finally {
+      if (type === "front") setUploadingFront(false);
+      else setUploadingBack(false);
+    }
+  };
+
+  const handleRemoveCover = (type: "front" | "back") => {
+    if (type === "front") {
+      deleteImageFromCloudinary(coverFrontImage);
+      setCoverFrontImage("");
+    } else {
+      deleteImageFromCloudinary(coverBackImage);
+      setCoverBackImage("");
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -202,17 +416,15 @@ const compressImage = (file: File): Promise<File> => {
       return;
     }
 
-    // Ensure all spreads have the panoramic image uploaded
     const incompleteIndex = spreads.findIndex((s) => !s.image);
     if (incompleteIndex !== -1) {
-      setFormError(`Spread #${incompleteIndex + 1} is missing its image. Each spread must contain an uploaded panoramic photo.`);
+      setFormError(`Spread #${incompleteIndex + 1} is missing its photo. Each spread needs an uploaded panoramic image.`);
       return;
     }
 
     setSaving(true);
 
     try {
-      // Map form state to DB layout (save same image to leftImage and rightImage)
       const mappedSpreads = spreads.map((s) => ({
         leftImage: s.image,
         rightImage: s.image,
@@ -220,10 +432,22 @@ const compressImage = (file: File): Promise<File> => {
         subtitle: s.subtitle,
       }));
 
-      const response = await fetch("/api/books", {
-        method: "POST",
+      const payload = {
+        title,
+        description,
+        coverFrontImage,
+        coverBackImage,
+        audioUrl,
+        spreads: mappedSpreads,
+      };
+
+      const url = editBookId ? `/api/books/${editBookId}` : "/api/books";
+      const method = editBookId ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, spreads: mappedSpreads }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -240,10 +464,19 @@ const compressImage = (file: File): Promise<File> => {
     }
   };
 
+  if (loadingBook) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-stone-400 gap-3">
+        <Loader className="animate-spin text-amber-500" size={32} />
+        <span className="font-serif italic text-sm text-amber-200/60">Loading album details...</span>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSave} className="max-w-4xl mx-auto space-y-8 text-stone-200">
       {/* 1. ALBUM METADATA CARD */}
-      <div className="bg-[#16100d] border border-amber-500/10 rounded-xl p-6 space-y-4 shadow-lg">
+      <div className="bg-[#16100d] border border-amber-500/10 rounded-xl p-6 space-y-4 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
         <h3 className="font-serif text-lg text-amber-100 uppercase tracking-wider font-semibold border-b border-amber-500/10 pb-2 flex items-center gap-2">
           <span>❦</span> Album Details
         </h3>
@@ -280,7 +513,163 @@ const compressImage = (file: File): Promise<File> => {
         </div>
       </div>
 
-      {/* 2. DYNAMIC PAGE SPREADS SECTION */}
+      {/* 2. ALBUM COVER PAGES & AUDIO */}
+      <div className="bg-[#16100d] border border-amber-500/10 rounded-xl p-6 space-y-6 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-400">
+        <h3 className="font-serif text-lg text-amber-100 uppercase tracking-wider font-semibold border-b border-amber-500/10 pb-2 flex items-center gap-2">
+          <span>❦</span> Covers & Ambiance
+        </h3>
+
+        {/* Cover Photos row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Front Cover Image */}
+          <div className="flex flex-col gap-2.5">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-amber-500/60 font-semibold flex items-center gap-1.5">
+              <ImageIcon size={12} className="text-amber-500" />
+              Front Cover Image (Optional)
+            </label>
+            
+            {coverFrontImage ? (
+              <div className="relative aspect-[4/3] w-full rounded-lg border border-amber-500/20 overflow-hidden shadow-inner group">
+                <img
+                  src={coverFrontImage}
+                  alt="Front Cover"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCover("front")}
+                    className="px-3 py-1.5 bg-rose-655 hover:bg-rose-500 text-black text-xs font-semibold uppercase tracking-wider rounded flex items-center gap-1 active:scale-95 transition-all"
+                    disabled={saving}
+                  >
+                    <X size={12} /> Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="relative aspect-[4/3] w-full rounded-lg border border-dashed border-amber-500/15 hover:border-amber-500/40 bg-stone-900/40 hover:bg-stone-900/60 flex flex-col items-center justify-center p-4 cursor-pointer transition-all gap-1.5 group">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleUploadCover(e, "front")}
+                  className="hidden"
+                  disabled={uploadingFront || saving}
+                />
+                {uploadingFront ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader className="animate-spin text-amber-500" size={20} />
+                    <span className="text-[9px] text-stone-500 font-mono">Uploading Cover...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload size={20} className="text-amber-500/30 group-hover:text-amber-500/70 transition-colors" />
+                    <span className="text-stone-400 text-xs font-serif font-medium">Select Front Cover Image</span>
+                    <span className="text-[9px] text-stone-600 font-mono">Elegant full bleed cover</span>
+                  </>
+                )}
+                {uploadErrorFront && (
+                  <span className="text-[9px] text-rose-500 font-medium">{uploadErrorFront}</span>
+                )}
+              </label>
+            )}
+          </div>
+
+          {/* Back Cover Image */}
+          <div className="flex flex-col gap-2.5">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-amber-500/60 font-semibold flex items-center gap-1.5">
+              <ImageIcon size={12} className="text-amber-500" />
+              Back Cover Image (Optional)
+            </label>
+            
+            {coverBackImage ? (
+              <div className="relative aspect-[4/3] w-full rounded-lg border border-amber-500/20 overflow-hidden shadow-inner group">
+                <img
+                  src={coverBackImage}
+                  alt="Back Cover"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCover("back")}
+                    className="px-3 py-1.5 bg-rose-655 hover:bg-rose-500 text-black text-xs font-semibold uppercase tracking-wider rounded flex items-center gap-1 active:scale-95 transition-all"
+                    disabled={saving}
+                  >
+                    <X size={12} /> Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="relative aspect-[4/3] w-full rounded-lg border border-dashed border-amber-500/15 hover:border-amber-500/40 bg-stone-900/40 hover:bg-stone-900/60 flex flex-col items-center justify-center p-4 cursor-pointer transition-all gap-1.5 group">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleUploadCover(e, "back")}
+                  className="hidden"
+                  disabled={uploadingBack || saving}
+                />
+                {uploadingBack ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader className="animate-spin text-amber-500" size={20} />
+                    <span className="text-[9px] text-stone-500 font-mono">Uploading Cover...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload size={20} className="text-amber-500/30 group-hover:text-amber-500/70 transition-colors" />
+                    <span className="text-stone-400 text-xs font-serif font-medium">Select Back Cover Image</span>
+                    <span className="text-[9px] text-stone-600 font-mono">Elegant full bleed cover</span>
+                  </>
+                )}
+                {uploadErrorBack && (
+                  <span className="text-[9px] text-rose-500 font-medium">{uploadErrorBack}</span>
+                )}
+              </label>
+            )}
+          </div>
+        </div>
+
+        {/* Soundtrack Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-amber-500/10 pt-6">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-mono tracking-wider text-amber-500/60 font-semibold flex items-center gap-1.5">
+              <Music size={12} className="text-amber-500" />
+              Background Soundtrack
+            </label>
+            <select
+              value={audioSelection}
+              onChange={(e) => setAudioSelection(e.target.value)}
+              className="w-full px-3 py-2 text-stone-200 text-sm bg-stone-900 border border-amber-500/10 rounded focus:border-amber-500/50 focus:outline-none transition-all"
+              disabled={saving}
+            >
+              <option value="silent">Silent (No Background Music)</option>
+              <option value="canon">Canon in D (Piano Cover Preset)</option>
+              <option value="acoustic">Acoustic Love (Acoustic Guitar Preset)</option>
+              <option value="serenade">Celestial Serenade (Ethereal Ambient Preset)</option>
+              <option value="custom">Custom Audio URL (Self-Hosted MP3)</option>
+            </select>
+          </div>
+
+          {audioSelection === "custom" && (
+            <div className="flex flex-col gap-1.5 animate-in fade-in duration-300">
+              <label className="text-[10px] uppercase font-mono tracking-wider text-amber-500/60 font-semibold">
+                Direct Audio MP3 URL
+              </label>
+              <input
+                type="url"
+                placeholder="https://example.com/song.mp3"
+                value={customAudioUrl}
+                onChange={(e) => setCustomAudioUrl(e.target.value)}
+                className="w-full px-3 py-2 text-stone-200 text-sm bg-stone-900 border border-amber-500/10 rounded focus:border-amber-500/50 focus:outline-none transition-all placeholder:text-stone-700 font-mono text-xs"
+                required
+                disabled={saving}
+              />
+              <span className="text-[9px] text-stone-500">Provide a direct path link to a public `.mp3` hosted audio file.</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. DYNAMIC PAGE SPREADS SECTION */}
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="font-serif text-lg text-amber-100 uppercase tracking-wider font-semibold">
@@ -288,12 +677,12 @@ const compressImage = (file: File): Promise<File> => {
           </h3>
           <button
             type="button"
-            onClick={handleAddSpread}
+            onClick={handleAddSpreadTop}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/20 hover:border-amber-500 hover:bg-amber-500 hover:text-black rounded text-amber-400 font-semibold text-xs tracking-wider uppercase active:scale-95 transition-all"
             disabled={saving}
           >
             <Plus size={14} />
-            Add Spread
+            Add Spread (Top)
           </button>
         </div>
 
@@ -301,7 +690,7 @@ const compressImage = (file: File): Promise<File> => {
           {spreads.map((spread, idx) => (
             <div
               key={idx}
-              className="bg-gradient-to-br from-[#1c1410] to-[#0c0908] border border-amber-500/10 rounded-xl p-6 space-y-6 relative shadow-lg"
+              className="bg-gradient-to-br from-[#1c1410] to-[#0c0908] border border-amber-500/10 rounded-xl p-6 space-y-6 relative shadow-lg animate-in fade-in duration-350"
             >
               {/* Index Badge & Remove Button */}
               <div className="flex justify-between items-center border-b border-amber-500/10 pb-3">
@@ -312,7 +701,7 @@ const compressImage = (file: File): Promise<File> => {
                   <button
                     type="button"
                     onClick={() => handleRemoveSpread(idx)}
-                    className="text-stone-500 hover:text-rose-400 p-1.5 hover:bg-white/5 rounded transition-all"
+                    className="text-stone-500 hover:text-rose-455 p-1.5 hover:bg-white/5 rounded transition-all"
                     title="Remove Spread"
                     disabled={saving}
                   >
@@ -369,7 +758,7 @@ const compressImage = (file: File): Promise<File> => {
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(idx)}
-                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-black text-xs font-semibold uppercase tracking-wider rounded flex items-center gap-1 active:scale-95 transition-all"
+                        className="px-3 py-1.5 bg-rose-655 hover:bg-rose-500 text-black text-xs font-semibold uppercase tracking-wider rounded flex items-center gap-1 active:scale-95 transition-all"
                         disabled={saving}
                       >
                         <X size={12} /> Remove
@@ -406,24 +795,37 @@ const compressImage = (file: File): Promise<File> => {
             </div>
           ))}
         </div>
+
+        {/* Bottom Add Spread Button */}
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={handleAddSpreadBottom}
+            className="flex items-center justify-center gap-2 px-6 py-2 border border-dashed border-amber-500/20 hover:border-amber-500 hover:bg-amber-500 hover:text-black rounded-lg text-amber-400 font-semibold text-xs tracking-wider uppercase active:scale-95 transition-all w-full max-w-xs"
+            disabled={saving}
+          >
+            <Plus size={14} />
+            Add Spread (Bottom)
+          </button>
+        </div>
       </div>
 
-      {/* 3. ERROR BANNER */}
+      {/* 4. ERROR BANNER */}
       {formError && (
         <div className="text-xs text-rose-500 bg-rose-500/5 border border-rose-500/10 px-4 py-3 rounded-lg text-center font-serif leading-relaxed max-w-xl mx-auto animate-in shake duration-300">
           <strong>Validation Error:</strong> {formError}
         </div>
       )}
 
-      {/* 4. FORM ACTION CONTROLS */}
+      {/* 5. FORM ACTION CONTROLS */}
       <div className="flex justify-end gap-4 border-t border-amber-500/10 pt-6">
         <button
           type="button"
-          onClick={onSuccess}
-          className="px-6 py-2.5 border border-stone-800 hover:bg-stone-900 hover:text-white rounded text-stone-400 text-xs uppercase font-mono tracking-wider font-semibold active:scale-95 transition-all"
+          onClick={onCancel || onSuccess}
+          className="px-6 py-2.5 border border-stone-850 hover:bg-stone-900 hover:text-white rounded text-stone-400 text-xs uppercase font-mono tracking-wider font-semibold active:scale-95 transition-all"
           disabled={saving}
         >
-          Cancel
+          {onCancel ? "Cancel" : "Back"}
         </button>
 
         <button
@@ -439,7 +841,7 @@ const compressImage = (file: File): Promise<File> => {
           ) : (
             <>
               <Check size={14} />
-              Save Album
+              {editBookId ? "Update Album" : "Save Album"}
             </>
           )}
         </button>

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { BookOpen, Mail, Link, Trash2, Calendar, Loader } from "lucide-react";
+import { BookOpen, Mail, Link, Trash2, Calendar, Loader, Edit } from "lucide-react";
 import { EmailShareModal } from "./EmailShareModal";
+import { useToastStore } from "@/store/useToastStore";
 
 interface Flipbook {
   _id: string;
@@ -14,9 +15,11 @@ interface Flipbook {
 
 interface BookListProps {
   onSelectTab: (tab: "list" | "create") => void;
+  onEditBook: (bookId: string) => void;
 }
 
-export function BookList({ onSelectTab }: BookListProps) {
+export function BookList({ onSelectTab, onEditBook }: BookListProps) {
+  const addToast = useToastStore((state) => state.addToast);
   const [books, setBooks] = useState<Flipbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,7 +53,7 @@ export function BookList({ onSelectTab }: BookListProps) {
     const origin = window.location.origin;
     const link = `${origin}/viewer/${bookId}`;
     navigator.clipboard.writeText(link);
-    alert("Shareable album link copied to clipboard!");
+    addToast("Shareable album link copied to clipboard!", "success");
   };
 
   const handleDelete = async (bookId: string) => {
@@ -63,12 +66,13 @@ export function BookList({ onSelectTab }: BookListProps) {
 
       if (response.ok) {
         setBooks(books.filter((b) => b._id !== bookId));
+        addToast("Album deleted successfully.", "success");
       } else {
-        alert("Failed to delete album.");
+        addToast("Failed to delete album.", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred. Please try again.");
+      addToast("An error occurred. Please try again.", "error");
     }
   };
 
@@ -158,19 +162,27 @@ export function BookList({ onSelectTab }: BookListProps) {
 
                 {/* Action Controls */}
                 <div className="grid grid-cols-2 gap-2 mt-6 pt-4 border-t border-amber-500/10">
+                  <button
+                    onClick={() => onEditBook(book._id)}
+                    className="col-span-2 flex items-center justify-center gap-1.5 px-3 py-2 border border-amber-500/20 hover:border-amber-500 hover:bg-amber-500 hover:text-black rounded text-amber-400 text-[10px] uppercase font-mono tracking-wider font-semibold transition-all active:scale-95"
+                  >
+                    <Edit size={12} />
+                    Edit Album
+                  </button>
+
                   <a
                     href={`/viewer/${book._id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/5 rounded text-amber-400 hover:text-white text-[10px] uppercase font-mono tracking-wider transition-all"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-stone-850 hover:border-stone-700 hover:bg-stone-900 rounded text-stone-400 hover:text-white text-[10px] uppercase font-mono tracking-wider transition-all"
                   >
-                    <BookOpen size={12} />
+                    <BookOpen size={12} className="text-amber-500/60" />
                     View Album
                   </a>
 
                   <button
                     onClick={() => setSelectedBook({ id: book._id, title: book.title })}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-stone-800 hover:border-stone-700 hover:bg-stone-900 rounded text-stone-400 hover:text-white text-[10px] uppercase font-mono tracking-wider transition-all"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-stone-850 hover:border-stone-700 hover:bg-stone-900 rounded text-stone-400 hover:text-white text-[10px] uppercase font-mono tracking-wider transition-all"
                   >
                     <Mail size={12} className="text-amber-500/60" />
                     Invite Guest
@@ -178,9 +190,9 @@ export function BookList({ onSelectTab }: BookListProps) {
 
                   <button
                     onClick={() => handleCopyLink(book._id)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-stone-800 hover:border-stone-700 hover:bg-stone-900 rounded text-stone-400 hover:text-white text-[10px] uppercase font-mono tracking-wider transition-all"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-stone-850 hover:border-stone-700 hover:bg-stone-900 rounded text-stone-400 hover:text-white text-[10px] uppercase font-mono tracking-wider transition-all"
                   >
-                    <Link size={12} />
+                    <Link size={12} className="text-amber-500/60" />
                     Copy Link
                   </button>
 

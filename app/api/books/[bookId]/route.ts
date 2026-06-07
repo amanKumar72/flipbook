@@ -61,3 +61,54 @@ export async function DELETE(
     );
   }
 }
+
+// PUT album by ID (Protected, owner only)
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ bookId: string }> }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { bookId } = await params;
+    await dbConnect();
+
+    const book = await Flipbook.findById(bookId);
+    if (!book) {
+      return NextResponse.json({ error: "Album not found" }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (book.userId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { title, description, coverFrontImage, coverBackImage, audioUrl, spreads } = body;
+
+    if (!title) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+
+    // Update fields
+    book.title = title;
+    book.description = description || "";
+    book.coverFrontImage = coverFrontImage || "";
+    book.coverBackImage = coverBackImage || "";
+    book.audioUrl = audioUrl || "";
+    book.spreads = spreads || [];
+
+    await book.save();
+    return NextResponse.json(book);
+  } catch (error: any) {
+    console.error("PUT single book error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update album" },
+      { status: 500 }
+    );
+  }
+}
+

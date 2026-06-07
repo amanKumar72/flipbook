@@ -1,8 +1,9 @@
 "use client";
 
-import React, { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useBookStore } from "@/store/useBookStore";
+import { albumData } from "@/data/album";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,9 +14,10 @@ import {
   Info,
   Maximize2,
   Minimize2,
-  Home,
-  Loader,
+  Phone,
+  MapPin,
   Music,
+  Home,
 } from "lucide-react";
 import { useToastStore } from "@/store/useToastStore";
 
@@ -35,7 +37,7 @@ function GoldParticles() {
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number; duration: number }>>([]);
 
   useEffect(() => {
-    const items = Array.from({ length: 40 }).map((_, i) => ({
+    const items = Array.from({ length: 45 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -66,18 +68,8 @@ function GoldParticles() {
   );
 }
 
-interface PageProps {
-  params: Promise<{ bookId: string }>;
-}
-
-export default function ViewerPage({ params }: PageProps) {
-  const { bookId } = use(params);
+export default function DemoPage() {
   const addToast = useToastStore((state) => state.addToast);
-
-  const [book, setBook] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   const currentPage = useBookStore((state) => state.currentPage);
   const totalPages = useBookStore((state) => state.totalPages);
   const isAnimating = useBookStore((state) => state.isAnimating);
@@ -90,53 +82,13 @@ export default function ViewerPage({ params }: PageProps) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
 
-  // Background Music
+  // Background Music State
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const toggleMusic = () => {
-    if (!audioRef.current) return;
-    if (isMusicPlaying) {
-      audioRef.current.pause();
-      setIsMusicPlaying(false);
-    } else {
-      audioRef.current.play().then(() => {
-        setIsMusicPlaying(true);
-      }).catch((err) => {
-        console.error("Audio playback blocked:", err);
-      });
-    }
-  };
 
   // Swipe Gestures
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-
-  // Fetch dynamic album data on mount
-  useEffect(() => {
-    let active = true;
-    fetch(`/api/books/${bookId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Wedding album not found or could not be loaded.");
-        return res.json();
-      })
-      .then((data) => {
-        if (active) {
-          setBook(data);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (active) {
-          setError(err.message || "Failed to load album.");
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [bookId]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -181,11 +133,10 @@ export default function ViewerPage({ params }: PageProps) {
         if (currentPage < totalPages) {
           nextPage();
         } else {
-          // Loop back to the front cover
           setPage(0);
         }
       }
-    }, 4000); // Transition every 4.0s
+    }, 3800);
 
     return () => clearInterval(interval);
   }, [isPlaying, currentPage, totalPages, isAnimating, nextPage, setPage]);
@@ -203,66 +154,29 @@ export default function ViewerPage({ params }: PageProps) {
     }
   };
 
-  // Copy viewer share link
-  const handleShareLink = () => {
-    const origin = window.location.origin;
-    const link = `${origin}/viewer/${bookId}`;
-    navigator.clipboard.writeText(link);
-    addToast("Shareable album link copied to clipboard!", "success");
+  // Audio Playback handler
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    if (isMusicPlaying) {
+      audioRef.current.pause();
+      setIsMusicPlaying(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsMusicPlaying(true);
+      }).catch((err) => {
+        console.error("Audio playback blocked:", err);
+      });
+    }
   };
 
   // Human-readable page display string
   const getPageLabel = () => {
-    if (!book || !book.spreads) return "";
     if (currentPage === 0) return "Cover (Front)";
     if (currentPage === totalPages) return "Cover (Back)";
     const prevPageNum = (currentPage - 1) * 2 + 1;
     const nextPageNum = (currentPage - 1) * 2 + 2;
-    return `Pages ${prevPageNum.toString().padStart(2, "0")} - ${nextPageNum.toString().padStart(2, "0")} / ${book.spreads.length * 2}`;
+    return `Pages ${prevPageNum.toString().padStart(2, "0")} - ${nextPageNum.toString().padStart(2, "0")} / ${albumData.length * 2}`;
   };
-
-  // Loading Screen
-  if (loading) {
-    return (
-      <main
-        className="w-screen h-screen bg-[#070504] flex flex-col items-center justify-center text-stone-200 gap-4"
-        style={{
-          backgroundImage: "radial-gradient(circle at center, #18120e 0%, #060504 100%)",
-        }}
-      >
-        <Loader className="animate-spin text-amber-500" size={36} />
-        <span className="font-serif italic text-sm text-amber-200/60">Opening wedding album...</span>
-      </main>
-    );
-  }
-
-  // Error Screen
-  if (error) {
-    return (
-      <main
-        className="w-screen h-screen bg-[#070504] flex flex-col items-center justify-center text-stone-200 p-6"
-        style={{
-          backgroundImage: "radial-gradient(circle at center, #18120e 0%, #060504 100%)",
-        }}
-      >
-        <div className="text-center max-w-md border border-rose-500/20 bg-rose-500/5 p-8 rounded-xl space-y-4">
-          <div className="w-12 h-12 rounded-full border border-rose-500/30 flex items-center justify-center text-rose-500 text-xl mx-auto">
-            ⚠️
-          </div>
-          <h2 className="font-serif text-lg font-bold text-amber-100 uppercase tracking-wide">
-            Album Unreachable
-          </h2>
-          <p className="text-xs text-stone-400 leading-relaxed">{error}</p>
-          <a
-            href="/"
-            className="inline-block mt-4 px-6 py-2 rounded bg-amber-600 hover:bg-amber-500 text-black text-xs font-semibold uppercase tracking-wider transition-all"
-          >
-            Go Home
-          </a>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main
@@ -276,66 +190,67 @@ export default function ViewerPage({ params }: PageProps) {
       {/* Background Gold Sparkles */}
       <GoldParticles />
 
-      {/* Hidden Audio Tag playing custom wedding music */}
-      {book.audioUrl && (
-        <audio
-          ref={audioRef}
-          src={book.audioUrl}
-          loop
-        />
-      )}
+      {/* Hidden Audio Tag playing beautiful piano instrumental */}
+      <audio
+        ref={audioRef}
+        src="https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-200.mp3"
+        loop
+      />
 
-      {/* 1. TOP HEADER BAR */}
+      {/* 1. TOP STATUS BAR */}
       <header className="relative w-full px-6 py-4 border-b border-amber-500/10 flex justify-between items-center bg-black/40 backdrop-blur-md z-10 select-none">
         {/* Left: laurel wreath + Title */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md shadow-amber-500/5 bg-amber-500/5">
+          <a
+            href="/"
+            className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif text-lg font-bold shadow-md shadow-amber-500/5 hover:bg-amber-500/10 transition-colors"
+          >
             ❦
-          </div>
+          </a>
           <div>
             <h1 className="font-serif text-base tracking-wider text-amber-100 font-semibold uppercase">
-              {book.title}
+              FlipiX Showcase Demo
             </h1>
-            <p className="text-[10px] text-amber-500/60 font-mono tracking-widest uppercase line-clamp-1">
-              {book.description || "Premium Wedding Showcase"}
+            <p className="text-[10px] text-amber-500/60 font-mono tracking-widest uppercase">
+              Premium digital Wedding Album
             </p>
           </div>
         </div>
 
-        {/* Center: Page indicator */}
-        <div className="hidden sm:flex flex-col items-center">
+        {/* Center: Live Date/Demo */}
+        <div className="hidden md:flex flex-col items-center">
           <span className="text-[10px] font-mono tracking-widest text-amber-500/70 uppercase">
-            Viewing Spread
+            Interactive Presentation
           </span>
           <span className="text-xs font-serif text-amber-200/90 font-medium">
-            {getPageLabel()}
+            Demo Thursday 05/09/2026
           </span>
         </div>
 
-        {/* Right: Quick back home action if authenticated */}
+        {/* Right: Studio details & Back Home */}
         <div className="flex items-center gap-4 text-right text-xs">
+          <div className="hidden sm:flex flex-col gap-0.5 text-stone-400">
+            <span className="flex items-center gap-1.5 justify-end">
+              <Phone size={12} className="text-amber-500/60" />
+              +91 91620 72838
+            </span>
+          </div>
           <a
-            href="/dashboard"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-850 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
-            title="Go to Dashboard"
+            href="/"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-800 hover:bg-stone-900 rounded text-stone-300 hover:text-white transition-all"
+            title="Go Home"
           >
             <Home size={14} className="text-amber-500/60" />
-            <span className="hidden sm:inline">Studio</span>
+            <span className="hidden sm:inline">Home</span>
           </a>
         </div>
       </header>
 
-      {/* 2. FLIP BOOK CONTAINER */}
+      {/* 2. MAIN 3D SHOWROOM CANVAS AREA */}
       <div className="relative flex-grow min-h-0 w-full z-0 flex items-center justify-center">
-        
-        {/* Render Dynamic HTMLBook with dynamic database spreads */}
-        <HTMLBook
-          spreads={book.spreads}
-          coverFrontImage={book.coverFrontImage}
-          coverBackImage={book.coverBackImage}
-        />
+        <HTMLBook />
 
-        {/* Guide Modal Overlay */}
+        {/* Floating Side Info Panel */}
         {showInfo && (
           <div className="absolute top-6 left-6 p-5 w-72 rounded-lg border border-amber-500/20 bg-black/85 backdrop-blur-md z-30 animate-in fade-in slide-in-from-left-4 duration-300">
             <h3 className="font-serif text-amber-400 font-semibold text-lg border-b border-amber-500/20 pb-2 mb-3">
@@ -368,37 +283,35 @@ export default function ViewerPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Vertical Decal decoration */}
+        {/* LEFT DECAL: Vertically Rotated Brand Label */}
         <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-4 pointer-events-none select-none">
           <div className="h-16 w-[1px] bg-gradient-to-b from-transparent to-amber-500/30" />
           <span className="text-[10px] tracking-[0.6em] font-bold text-amber-500/40 uppercase [writing-mode:vertical-lr] rotate-180">
-            OUR MEMORIES
+            FLIPIX SHOWROOM
           </span>
           <div className="h-16 w-[1px] bg-gradient-to-t from-transparent to-amber-500/30" />
         </div>
 
-        {/* Right floating toolbar controls */}
+        {/* RIGHT DECAL: Vertical Toolbar Panel (FlipiX Style) */}
         <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-3.5 p-2 rounded-full border border-amber-500/10 bg-black/60 backdrop-blur-md z-20 shadow-xl shadow-black/40">
-          {/* Glowing Music Button (Only if audioUrl is set) */}
-          {book.audioUrl && (
-            <button
-              onClick={toggleMusic}
-              title={isMusicPlaying ? "Mute Music" : "Play Background Music"}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 relative ${
-                isMusicPlaying
-                  ? "bg-amber-500 text-black shadow-lg shadow-amber-500/40 border border-amber-400"
-                  : "text-amber-400 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Music size={16} className={isMusicPlaying ? "animate-bounce" : ""} />
-              {isMusicPlaying && (
-                <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"></span>
-                </span>
-              )}
-            </button>
-          )}
+          {/* Glowing Music Button */}
+          <button
+            onClick={toggleMusic}
+            title={isMusicPlaying ? "Mute Music" : "Play Wedding Music"}
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 relative ${
+              isMusicPlaying
+                ? "bg-amber-500 text-black shadow-lg shadow-amber-500/40 border border-amber-400"
+                : "text-amber-400 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <Music size={16} className={isMusicPlaying ? "animate-bounce" : ""} />
+            {isMusicPlaying && (
+              <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"></span>
+              </span>
+            )}
+          </button>
 
           <button
             onClick={() => setIsPlaying(!isPlaying)}
@@ -433,8 +346,12 @@ export default function ViewerPage({ params }: PageProps) {
           </button>
 
           <button
-            onClick={handleShareLink}
-            title="Copy Share Link"
+            onClick={() => {
+              const origin = window.location.origin;
+              navigator.clipboard.writeText(`${origin}/demo`);
+              addToast("Showroom demo link copied to clipboard!", "success");
+            }}
+            title="Share Presentation"
             className="w-9 h-9 rounded-full text-amber-400 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all"
           >
             <Share2 size={16} />
@@ -449,11 +366,6 @@ export default function ViewerPage({ params }: PageProps) {
           </button>
         </div>
       </div>
-
-      {/* Mobile Page indicator footer */}
-      <footer className="sm:hidden relative py-3 bg-black/40 border-t border-amber-500/10 text-center text-[10px] text-amber-200/80 font-serif z-10">
-        {getPageLabel()}
-      </footer>
     </main>
   );
 }

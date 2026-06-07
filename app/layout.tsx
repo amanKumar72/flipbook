@@ -4,6 +4,7 @@ import "./globals.css"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/Toast/Toaster";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'})
 
@@ -25,7 +26,10 @@ export default function RootLayout({
         className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
       >
         <body>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

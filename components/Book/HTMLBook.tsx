@@ -46,10 +46,12 @@ interface HTMLBookProps {
     title: string;
     subtitle: string;
   }>;
+  coverFrontImage?: string;
+  coverBackImage?: string;
 }
 
 // 2. Main HTML Book Component
-export default function HTMLBook({ spreads = albumData }: HTMLBookProps) {
+export default function HTMLBook({ spreads = albumData, coverFrontImage, coverBackImage }: HTMLBookProps) {
   const currentPage = useBookStore((state) => state.currentPage);
   const totalPages = useBookStore((state) => state.totalPages);
   const isAnimating = useBookStore((state) => state.isAnimating);
@@ -145,8 +147,12 @@ export default function HTMLBook({ spreads = albumData }: HTMLBookProps) {
     <div className="w-full h-full flex items-center justify-center min-h-0 select-none overflow-hidden">
       {/* 3. HTML PAGE FLIP BOOK WRAPPER WITH CSS SCALE */}
       <div
-        className="relative w-[1240px] h-[460px] flex justify-center items-center overflow-visible select-none origin-center transition-transform duration-150 shrink-0"
-        style={{ transform: `scale(${scale})` }}
+        className="relative w-[1240px] h-[460px] flex justify-center items-center overflow-visible select-none origin-center transition-all duration-500 ease-in-out shrink-0"
+        style={{
+          transform: `scale(${scale}) translateX(${
+            currentPage === 0 ? -310 : currentPage === totalPages ? 310 : 0
+          }px)`,
+        }}
       >
         <HTMLPageFlip
           width={620}
@@ -162,34 +168,48 @@ export default function HTMLBook({ spreads = albumData }: HTMLBookProps) {
           className="shadow-2xl rounded-sm"
         >
                   {/* PAGE 00: FRONT COVER */}
-                  <BookPage isCover={true} pageNumber="Cover">
-                    {/* Golden borders */}
-                    <div className="absolute inset-4 border border-[#daaf37]/35 rounded-sm pointer-events-none" />
-                    <div className="absolute inset-5 border border-[#daaf37]/10 rounded-sm pointer-events-none" />
-                    
-                    {/* Logo Emblem */}
-                    <div className="flex-grow flex flex-col justify-center items-center text-center gap-6 p-4">
-                      <div className="w-24 h-24 rounded-full border border-amber-500/35 flex items-center justify-center text-amber-400 font-serif text-3xl font-bold shadow-lg shadow-amber-500/5 bg-amber-500/5 animate-pulse">
-                        ❦
+                  <BookPage isCover={true} pageNumber="Cover" fullBleed={!!coverFrontImage}>
+                    {coverFrontImage ? (
+                      <div className="w-full h-full relative">
+                        <img
+                          src={coverFrontImage}
+                          alt="Front Cover"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/15 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 border border-[#daaf37]/15 pointer-events-none" />
                       </div>
-                      <div className="space-y-3">
-                        <p className="text-[10px] tracking-[0.5em] font-mono text-amber-500/50 uppercase">
-                          Our Eternal Journey
-                        </p>
-                        <h2 className="font-serif text-3xl font-bold tracking-wider text-amber-100 uppercase">
-                          OUR WEDDING
-                        </h2>
-                        <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#daaf37]/45 to-transparent mx-auto" />
-                        <p className="font-serif italic text-base text-amber-300/60">
-                          A Story of Love & Devotion
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Bottom date stamp */}
-                    <div className="text-center font-mono text-[9px] tracking-widest text-amber-500/40 uppercase">
-                      Est. Thursday 05/09/2026
-                    </div>
+                    ) : (
+                      <>
+                        {/* Golden borders */}
+                        <div className="absolute inset-4 border border-[#daaf37]/35 rounded-sm pointer-events-none" />
+                        <div className="absolute inset-5 border border-[#daaf37]/10 rounded-sm pointer-events-none" />
+                        
+                        {/* Logo Emblem */}
+                        <div className="flex-grow flex flex-col justify-center items-center text-center gap-6 p-4">
+                          <div className="w-24 h-24 rounded-full border border-amber-500/35 flex items-center justify-center text-amber-400 font-serif text-3xl font-bold shadow-lg shadow-amber-500/5 bg-amber-500/5 animate-pulse">
+                            ❦
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] tracking-[0.5em] font-mono text-amber-500/50 uppercase">
+                              Our Eternal Journey
+                            </p>
+                            <h2 className="font-serif text-3xl font-bold tracking-wider text-amber-100 uppercase">
+                              OUR WEDDING
+                            </h2>
+                            <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#daaf37]/45 to-transparent mx-auto" />
+                            <p className="font-serif italic text-base text-amber-300/60">
+                              A Story of Love & Devotion
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Bottom date stamp */}
+                        <div className="text-center font-mono text-[9px] tracking-widest text-amber-500/40 uppercase">
+                          Est. Thursday 05/09/2026
+                        </div>
+                      </>
+                    )}
                   </BookPage>
 
                   {/* GENERATE INNER PAGES */}
@@ -259,22 +279,36 @@ export default function HTMLBook({ spreads = albumData }: HTMLBookProps) {
                   })}
 
                   {/* PAGE 13: BACK COVER */}
-                  <BookPage isCover={true} pageNumber="Cover-Back">
-                    <div className="absolute inset-4 border border-[#daaf37]/35 rounded-sm pointer-events-none" />
-                    <div className="absolute inset-5 border border-[#daaf37]/10 rounded-sm pointer-events-none" />
-                    
-                    <div className="flex-grow flex flex-col justify-center items-center text-center">
-                      <div className="text-amber-500/45 text-2xl font-serif mb-4 animate-pulse">
-                        ✦
+                  <BookPage isCover={true} pageNumber="Cover-Back" fullBleed={!!coverBackImage}>
+                    {coverBackImage ? (
+                      <div className="w-full h-full relative">
+                        <img
+                          src={coverBackImage}
+                          alt="Back Cover"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-l from-black/15 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 border border-[#daaf37]/15 pointer-events-none" />
                       </div>
-                      <p className="text-[9px] tracking-[0.4em] font-mono text-amber-500/40 uppercase">
-                        The End
-                      </p>
-                      <h3 className="font-serif text-xs italic text-stone-500/80 mt-1">
-                        May your love burn brighter than a thousand stars.
-                    </h3>
-                  </div>
-                </BookPage>
+                    ) : (
+                      <>
+                        <div className="absolute inset-4 border border-[#daaf37]/35 rounded-sm pointer-events-none" />
+                        <div className="absolute inset-5 border border-[#daaf37]/10 rounded-sm pointer-events-none" />
+                        
+                        <div className="flex-grow flex flex-col justify-center items-center text-center">
+                          <div className="text-amber-500/45 text-2xl font-serif mb-4 animate-pulse">
+                            ✦
+                          </div>
+                          <p className="text-[9px] tracking-[0.4em] font-mono text-amber-500/40 uppercase">
+                            The End
+                          </p>
+                          <h3 className="font-serif text-xs italic text-stone-500/80 mt-1">
+                            May your love burn brighter than a thousand stars.
+                          </h3>
+                        </div>
+                      </>
+                    )}
+                  </BookPage>
               </HTMLPageFlip>
               </div>
     </div>
