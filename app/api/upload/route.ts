@@ -1,8 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
+import type { UploadApiResponse } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import fs from "fs";
-import path from "path";
+
+export const runtime = "nodejs";
 
 // Configure Cloudinary from server-side environment variables
 cloudinary.config({
@@ -11,8 +12,20 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return "Unknown error";
+}
+
 export async function POST(req: NextRequest) {
-  let tempFilePath = "";
   try {
     // 1. Verify Authentication using Clerk
     const { userId } = await auth();
@@ -32,60 +45,40 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create a temp directory and write file to it for chunked upload
-    const tempDir = path.join(process.cwd(), "tmp");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    // Clean up filename to prevent path traversal issues
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    tempFilePath = path.join(tempDir, `upload_${Date.now()}_${safeName}`);
-    fs.writeFileSync(tempFilePath, buffer);
-
-    // 3. Upload to Cloudinary under UPLOAD_FOLDER using upload_large for chunking
+    // 3. Upload to Cloudinary under UPLOAD_FOLDER without writing to the deployment filesystem
     const uploadFolder = process.env.UPLOAD_FOLDER || "flipbook";
-    
-    const result = await new Promise<any>((resolve, reject) => {
-      cloudinary.uploader.upload_large(
-        tempFilePath,
+
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: uploadFolder,
           resource_type: "image",
-          chunk_size: 6000000, // 6MB chunks to handle files up to 25MB+
         },
         (error, uploadResult) => {
           if (error) {
             reject(error);
+          } else if (!uploadResult) {
+            reject(new Error("Cloudinary upload completed without a result."));
           } else {
             resolve(uploadResult);
           }
         }
       );
+
+      uploadStream.on("error", reject);
+      uploadStream.end(buffer);
     });
 
-    console.log("Cloudinary upload_large result:", result);
+    console.log("Cloudinary upload result:", result);
 
     // 4. Return the secure URL
     return NextResponse.json({ url: result.secure_url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Cloudinary upload error:", error);
     return NextResponse.json(
-      { error: "Upload failed: " + (error.message || "Unknown error") },
+      { error: "Upload failed: " + getErrorMessage(error) },
       { status: 500 }
     );
-  } finally {
-    // Always clean up temp files with a delay to ensure Cloudinary's internal stream has fully closed
-    if (tempFilePath) {
-      setTimeout(() => {
-        try {
-          if (fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-          }
-        } catch (err) {
-          console.error("Failed to delete temp file:", err);
-        }
-      }, 15000); // 15 seconds delay
-    }
   }
 }
 
@@ -138,12 +131,11 @@ export async function DELETE(req: NextRequest) {
     const result = await cloudinary.uploader.destroy(publicId);
 
     return NextResponse.json({ success: true, result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Cloudinary delete error:", error);
     return NextResponse.json(
-      { error: "Delete failed: " + (error.message || "Unknown error") },
+      { error: "Delete failed: " + getErrorMessage(error) },
       { status: 500 }
     );
   }
 }
-
